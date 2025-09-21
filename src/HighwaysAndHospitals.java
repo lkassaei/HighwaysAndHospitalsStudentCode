@@ -19,71 +19,72 @@ public class HighwaysAndHospitals {
      */
     public static long cost(int n, int hospitalCost, int highwayCost, int cities[][]) {
         // Main Question: How many clusters do we have (because we only need one hospital per cluster)
-        // Use DFS to count chunks on each layer
 
         // Edge case: Hospitals are less than highways so just give every city a hospital
         if (hospitalCost <= highwayCost) {
             return (long) n * hospitalCost;
         }
 
-        // Create a graph for quick lookups during DFS
-        ArrayList<Integer>[] graph = new ArrayList[n + 1];
+        // Each index equals its associated city. Each index saves its father root.
+        // The father root saves the number of cities below it (order) in its negative value for differentiation.
+        int[] roots = new int[n + 1];
 
-        // Initialize each ArrayList in graph, representing all possible connections at graph[city]
-        for (int i = 1; i <= n; i++) {
-            graph[i] = new ArrayList<>();
+        // Each city starts as its own root with a size of 1 (represented by -1)
+        for (int i = 0; i < n; i++) {
+            roots[i] = -1;
         }
 
-        // Populate graph by putting each connection in the graph at the index that corresponds with the city
+        // At first, the cities are all disconnected, so the clusters equals the number of cities
+        int numClusters = n;
+
+        // Go through each possible connection
         for (int[] edge : cities) {
-            int cityOne = edge[0];
-            int cityTwo = edge[1];
-            graph[cityOne].add(cityTwo);
-            graph[cityTwo].add(cityOne);
-        }
+            // Find the ultimate roots of each city
+            int ultimateParent1 = findUltimateParent(roots, edge[0]);
+            int ultimateParent2 = findUltimateParent(roots, edge[1]);
 
-        // Create array that marks what has been visited
-        boolean[] visited = new boolean[n + 1];
+            // If the cities are not yet connected
+            if (ultimateParent1 != ultimateParent2) {
+                // Find the orders of the two clusters by changing it from its negative value to positive
+                int order1 = roots[ultimateParent1] * -1;
+                int order2 = roots[ultimateParent2] * -1;
 
-        // Create count for clusters of cities (AKA where the connections stop)
-        int numClusters = 0;
-
-        // Go through each city, performing DFS on unvisited ones
-        for (int i = 1; i <= n; i++) {
-            // If a city is not visited, it has no before seen connections so it is a new cluster
-            // Perform DFS with this city to mark all of its connections in the new cluster
-            if (!visited[i]) {
-                performDFS(i, visited, graph);
-                numClusters++;
+                // If the first order is greater, compress the second tree into the first
+                if (order1 >= order2) {
+                    // Update the new parent root
+                    roots[ultimateParent2] = ultimateParent1;
+                    // Update the new size of the new parent root by changing the orders of the two trees to negative
+                    roots[ultimateParent1] = -1 * (order1 + order2);
+                }
+                // If the second order is greater, compress the first tree into the second
+                else {
+                    // Update the new parent root
+                    roots[ultimateParent1] = ultimateParent2;
+                    // Update the new size of the new parent root by changing the orders of the two trees to negative
+                    roots[ultimateParent2] = -1 * (order1 + order2);
+                }
+                // A new connection has been made, meaning there is one less cluster
+                numClusters-=1;
             }
         }
+
         // Find the cost of all hospitals by giving each cluster a hospital
-        long finalHospitalCost = (long) numClusters * hospitalCost;
         // Find the cost of all highways by subtracting hospitals from total cities and giving highways to the rest
-        long finalHighwayCost = (long) (n - numClusters) * highwayCost;
         // Add up costs and return total
-        return finalHospitalCost + finalHighwayCost;
+        return (long) numClusters * hospitalCost + (long) (n - numClusters) * highwayCost;
     }
 
-    // Performs Depth-First-Search to find all connections between cities
-    public static void performDFS(int start, boolean visited[], ArrayList<Integer>[] graph) {
-        // Create stack and explore our starting value
-        Stack<Integer> stack = new Stack<>();
-        stack.push(start);
-        visited[start] = true;
-
-        // While we still have connections to search
-        while(!stack.isEmpty()) {
-            // Find the next connection
-            int current = stack.pop();
-            // Find the connections of the connections and mark those as visited
-            for (int neighbor: graph[current]) {
-                if (!visited[neighbor]) {
-                    visited[neighbor] = true;
-                    // Eventually find the connections of the new connection
-                    stack.push(neighbor);
-                }
-            }
+    // Find the ultimate parent of a given node by tracing up parent by parent until we find a negative value
+    // If a value is negative, we know it is a parent root because it is storing its order
+    public static int findUltimateParent(int[] roots, int node) {
+        // If the parent root is found
+        if (roots[node] < 0) {
+            // Return its index
+            return node;
         }
+        // Do the same thing for the parent of the node until we find an ultimate root
+        // Use path compression by making each node point directly to its root
+        roots[node] = findUltimateParent(roots, roots[node]);
+        return roots[node];
     }
 }
