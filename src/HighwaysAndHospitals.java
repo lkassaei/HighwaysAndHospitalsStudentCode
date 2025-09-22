@@ -77,14 +77,22 @@ public class HighwaysAndHospitals {
     // Find the ultimate parent of a given node by tracing up parent by parent until we find a negative value
     // If a value is negative, we know it is a parent root because it is storing its order
     public static int findUltimateParent(int[] roots, int node) {
-        // If the parent root is found
-        if (roots[node] < 0) {
-            // Return its index
-            return node;
+        // While we haven't found the ultimate parent
+        while (roots[node] > 0) {
+            // Reassign to its parent
+            node = roots[node];
         }
-        // Do the same thing for the parent of the node until we find an ultimate root
-        // Use path compression by making each node point directly to its root
-        roots[node] = findUltimateParent(roots, roots[node]);
-        return roots[node];
+
+        // Path compression: make all nodes on the path point directly to the root
+        int current = node;
+        // While we haven't assigned yet to the ultimate parent
+        while (roots[current] > 0) {
+            // Go up
+            int next = roots[current];
+            roots[current] = node;
+            current = next;
+        }
+        // Return
+        return node;
     }
 }
